@@ -11,13 +11,23 @@ export class TokenStorage {
   }
 
   public getTokens(): Credentials | null {
+    // 1. Check if tokens are provided via environment variable (useful for Railway/Cloud)
+    if (process.env.GOOGLE_TOKENS) {
+      try {
+        return JSON.parse(process.env.GOOGLE_TOKENS) as Credentials;
+      } catch (error) {
+        Logger.error('Failed to parse GOOGLE_TOKENS environment variable', { error });
+      }
+    }
+
+    // 2. Fallback to reading from local file
     try {
       if (fs.existsSync(this.filePath)) {
         const data = fs.readFileSync(this.filePath, 'utf-8');
         return JSON.parse(data) as Credentials;
       }
     } catch (error) {
-      Logger.error('Failed to read token storage', { error });
+      Logger.error('Failed to read token storage file', { error });
     }
     return null;
   }
