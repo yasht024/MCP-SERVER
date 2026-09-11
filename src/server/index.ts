@@ -1,6 +1,7 @@
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import express from 'express';
+import cors from 'cors';
 import { GoogleAuthClient } from '../auth/oauth.js';
 import { GmailService } from '../services/gmail.js';
 import { DocsService } from '../services/docs.js';
@@ -36,6 +37,15 @@ async function main() {
   getConfig();
 
   const app = express();
+  // Browser-based MCP clients (e.g. remote connector wizards) need CORS,
+  // with these response headers exposed so they can read session/auth
+  // negotiation state instead of failing discovery silently.
+  app.use(
+    cors({
+      origin: '*',
+      exposedHeaders: ['Mcp-Session-Id', 'WWW-Authenticate', 'Last-Event-Id', 'Mcp-Protocol-Version'],
+    })
+  );
   app.use(express.json());
 
   // Stateless Streamable HTTP: a fresh server + transport per request, no
