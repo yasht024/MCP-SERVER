@@ -1,0 +1,11 @@
+.git
+node_modules
+build
+.env
+.env.*
+tokens.json
+idempotency.json
+credential.json
+*.log
+scripts
+tests
