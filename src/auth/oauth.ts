@@ -43,11 +43,13 @@ export class GoogleAuthClient {
     }
   }
 
-  public getAuthUrl(): string {
+  public getAuthUrl(state?: string, loginHint?: string): string {
     return this.oauth2Client.generateAuthUrl({
       access_type: 'offline', // Required to receive a refresh token
       prompt: 'consent',      // Force consent to always get a refresh token
       scope: SCOPES,
+      state,
+      login_hint: loginHint,
     });
   }
 
@@ -64,7 +66,7 @@ export class GoogleAuthClient {
 
   public async validateAuth(): Promise<void> {
     const tokens = this.tokenStorage.getTokens();
-    if (!tokens || !tokens.access_token) {
+    if (!tokens || (!tokens.access_token && !tokens.refresh_token)) {
       throw new McpError(ErrorCode.AUTHENTICATION_REQUIRED, 'Authentication is missing. Please authorize the application.');
     }
     

@@ -1,3 +1,4 @@
+import { GoogleAuthClient } from '../auth/oauth.js';
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { CallToolRequestSchema, ListToolsRequestSchema } from '@modelcontextprotocol/sdk/types.js';
 import { 
@@ -15,11 +16,18 @@ import { Logger } from '../infrastructure/logger.js';
 export function registerTools(
   server: Server,
   gmailService: GmailService,
-  docsService: DocsService
+  docsService: DocsService,
+  authClient: GoogleAuthClient
 ) {
   server.setRequestHandler(ListToolsRequestSchema, async () => {
     return {
       tools: [
+        {
+          name: "google_auth_status",
+          description: "Check Google authorization without creating mail or changing documents.",
+          inputSchema: {type: "object", properties: {}, additionalProperties: false},
+          annotations: {readOnlyHint: true, destructiveHint: false},
+        },
         {
           name: 'gmail_create_draft',
           description: 'Creates a Gmail draft but does not send it. Use this to prepare an email for human review.',
@@ -76,6 +84,10 @@ export function registerTools(
 
   server.setRequestHandler(CallToolRequestSchema, async (request) => {
     try {
+      if (request.params.name === 'google_auth_status') {
+        await authClient.validateAuth();
+        return {content: [{type: 'text', text: JSON.stringify({status: 'connected'})}]};
+      }
       if (request.params.name === 'gmail_create_draft') {
         const params = gmailCreateDraftSchema.parse(request.params.arguments);
         if (params.to.length + (params.cc?.length || 0) + (params.bcc?.length || 0) > MAX_RECIPIENTS) {
@@ -113,7 +125,7 @@ export function registerTools(
         throw new McpError(ErrorCode.INVALID_INPUT, `Unknown tool: ${request.params.name}`);
       }
     } catch (error: any) {
-      Logger.error(`Tool execution failed for ${request.params.name}`, { error });
+      Logger.error(`Tool execution failed for ${request.params.name}`, {code: error instanceof McpError ? error.code : "INTERNAL_ERROR"});
       
       let errorResponse;
       if (error instanceof McpError) {

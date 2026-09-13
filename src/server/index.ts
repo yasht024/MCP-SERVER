@@ -8,6 +8,7 @@ import { DocsService } from '../services/docs.js';
 import { registerTools } from '../tools/index.js';
 import { Logger } from '../infrastructure/logger.js';
 import { getConfig } from './config.js';
+import { requireMcpToken } from './access.js';
 
 function createMcpServer(): Server {
   const authClient = new GoogleAuthClient();
@@ -26,7 +27,7 @@ function createMcpServer(): Server {
     }
   );
 
-  registerTools(server, gmailService, docsService);
+  registerTools(server, gmailService, docsService, authClient);
   return server;
 }
 
@@ -46,6 +47,8 @@ async function main() {
       exposedHeaders: ['Mcp-Session-Id', 'WWW-Authenticate', 'Last-Event-Id', 'Mcp-Protocol-Version'],
     })
   );
+  app.get('/health', (_req, res) => { res.json({status: 'ok'}); });
+  app.use('/mcp', requireMcpToken());
   app.use(express.json());
 
   // Stateless Streamable HTTP: a fresh server + transport per request, no
